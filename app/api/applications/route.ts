@@ -1,6 +1,5 @@
-import { put } from '@vercel/blob';
 import crypto from 'node:crypto';
-import { readApplication } from '@/lib/application-storage';
+import { createApplication, readApplication } from '@/lib/application-storage';
 
 export const runtime = 'nodejs';
 
@@ -15,8 +14,8 @@ export async function POST(request: Request) {
     if (name.length > 80 || details.length > 500) return Response.json({ error: 'Input is too long.' }, { status: 400 });
     const id = `ADS${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
     const now = new Date().toISOString();
-    const application = { id, service, name, mobile, details, status: 'Submitted', createdAt: now, updatedAt: now };
-    await put(`applications/${id}.json`, JSON.stringify(application), { access: 'private', allowOverwrite: false, contentType: 'application/json' });
+    const application = { id, service, name, mobile, details, status: 'Submitted' as const, createdAt: now, updatedAt: now };
+    await createApplication(application);
     return Response.json({ id, status: application.status });
   } catch (error) {
     console.error('Application create error:', error);
