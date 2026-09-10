@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { createApplication, readApplication } from '@/lib/application-storage';
+import { createApplication, readApplication } from '../../../lib/application-storage';
 
 export const runtime = 'nodejs';
 
