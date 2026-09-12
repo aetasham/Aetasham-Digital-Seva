@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import Script from 'next/script';
 import { useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 
 const services = [
-  { value: 'PAN', label: 'PAN Services', icon: '🪪', docs: ['Aadhaar / identity proof', 'Address proof', 'Passport-size photo'] },
+  { value: 'PAN', label: 'PAN Services', icon: '🪪', docs: ['Aadhaar / identity proof', 'Address proof', 'Passport-size photo'], fee: 149 },
   { value: 'Voter', label: 'Voter Services', icon: '🗳️', docs: ['Identity proof', 'Address proof', 'Date of birth proof'] },
   { value: 'Ration Card', label: 'Ration Card', icon: '🍚', docs: ['Identity proof', 'Address proof', 'Family details'] },
   { value: 'Certificate', label: 'Certificates', icon: '📜', docs: ['Identity proof', 'Address proof', 'Supporting documents as applicable'] },
@@ -14,6 +15,8 @@ const services = [
   { value: 'Print & Documents', label: 'Print & Documents', icon: '🖨️', docs: ['Digital file or document to print/scan'] },
   { value: 'Other', label: 'Other Digital Services', icon: '💻', docs: ['Documents relevant to your request'] },
 ];
+
+declare global { interface Window { Razorpay: any; } }
 
 function ApplyForm() {
   const params = useSearchParams();
@@ -29,10 +32,41 @@ function ApplyForm() {
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => { setService(params.get('service') || ''); }, [params]);
 
   const selected = useMemo(() => services.find(item => item.value === service), [service]);
+
+  async function payForPan() {
+    setError('');
+    if (!result || !selected?.fee) return;
+    if (!window.Razorpay) return setError('Payment system is still loading. Please try again.');
+    setPaying(true);
+    try {
+      const orderResponse = await fetch('/api/payments/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: selected.fee * 100, receipt: result }) });
+      const order = await orderResponse.json();
+      if (!orderResponse.ok) throw new Error(order.error || 'Unable to start payment.');
+      const razorpay = new window.Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Aetasham Digital Seva',
+        description: 'PAN service assistance',
+        order_id: order.id,
+        prefill: { name, email, contact: mobile },
+        notes: { application_id: result },
+        theme: { color: '#0f766e' },
+        handler: () => setError('Payment received by Razorpay. Keep the payment confirmation for your records.'),
+        modal: { ondismiss: () => setPaying(false) },
+      });
+      razorpay.open();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to start payment.');
+    } finally {
+      setPaying(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setError(''); setResult('');
@@ -52,12 +86,13 @@ function ApplyForm() {
       const response = await fetch('/api/applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service, name: name.trim(), mobile, details: requestDetails }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to submit application.');
-      setResult(data.id); setName(''); setMobile(''); setEmail(''); setDob(''); setAddress(''); setPincode(''); setDetails(''); setConsent(false);
+      setResult(data.id);
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to submit application.'); }
     finally { setSaving(false); }
   }
 
   return <section className="section applyPage">
+    <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
     <div className="applyHero"><div><span className="eyebrow">DIGITAL SEVA CENTRE</span><h1>Apply for a Service</h1><p>Complete the application below. Your request will receive a unique application ID after successful submission.</p></div><div className="stepBox"><b>Application Process</b><span>1. Fill details</span><span>2. Submit request</span><span>3. Track status</span></div></div>
     <div className="applyLayout">
       <div className="formbox">
@@ -70,8 +105,8 @@ function ApplyForm() {
           <div className="formSection"><h3>Before You Submit</h3><div className="checklist">{(selected?.docs || ['Relevant documents']).map(doc => <span key={doc}>✓ {doc}</span>)}</div><label className="consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /> <span>I confirm that the information provided is accurate and I understand this is a private digital assistance service.</span></label></div>
           <button className="primary submitButton" type="submit" disabled={saving}>{saving ? 'Submitting Application...' : 'Submit Application →'}</button>
         </form>
-        {error && <div className="notice errorNotice"><div><b>Submission failed</b><p>{error}</p></div></div>}
-        {result && <div className="notice successNotice"><div><b>Application submitted successfully 🎉</b><p>Your Application ID is <strong>{result}</strong></p><p className="muted">Save this ID to track your application status.</p><Link href={`/status?id=${encodeURIComponent(result)}`}>Track Application →</Link></div></div>}
+        {error && <div className="notice errorNotice"><div><b>Notice</b><p>{error}</p></div></div>}
+        {result && <div className="notice successNotice"><div><b>Application submitted successfully 🎉</b><p>Your Application ID is <strong>{result}</strong></p><p className="muted">Save this ID to track your application status.</p>{selected?.fee ? <><p><strong>PAN Service Total: ₹{selected.fee}</strong><br />Official fee ₹107 + Digital Seva service charge ₹42</p><button className="primary" type="button" onClick={payForPan} disabled={paying}>{paying ? 'Opening Payment...' : 'Pay ₹149 with Razorpay →'}</button></> : null}<br /><Link href={`/status?id=${encodeURIComponent(result)}`}>Track Application →</Link></div></div>}
       </div>
       <aside className="applySide"><div className="sideCard"><span className="eyebrow">DOCUMENT GUIDE</span><h3>Keep documents ready</h3><p>Requirements can vary by service. The centre may request additional documents when reviewing your application.</p><ul>{(selected?.docs || ['Identity proof', 'Address proof', 'Service-specific documents']).map(doc => <li key={doc}>✓ {doc}</li>)}</ul></div><div className="sideCard"><span className="eyebrow">NEED HELP?</span><h3>Not sure which service to choose?</h3><p>Choose the closest service and explain your requirement in Request Details. The centre can review it.</p><Link href="/services">View All Services →</Link></div><div className="sideCard privacyCard"><b>🔒 Privacy</b><p>Only provide information needed for your service request. Do not enter passwords, OTPs, PINs or payment-card details.</p></div></aside>
     </div>
