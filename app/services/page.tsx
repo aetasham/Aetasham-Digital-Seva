@@ -40,7 +40,9 @@ export default function ServicesPage() {
       {categories.map(category => <div key={category.title} style={{ marginBottom: 36 }}>
         <h3 style={{ marginBottom: 16 }}>{category.title}</h3>
         <div className="grid">{category.items.map(([icon, title, desc, service]) => <article className="service" key={title}>
-          <div className="serviceIcon">{icon}</div><h3>{title}</h3><p>{desc}</p><Link href={`/apply?service=${encodeURIComponent(service)}`}>Apply Now →</Link>
+          <div className="serviceIcon">{icon}</div><h3>{title}</h3><p>{desc}</p>
+          {title === 'PAN Services' && <a className="serviceOfficialLink" href="https://www.pan.utiitsl.com/" target="_blank" rel="noreferrer">Official PAN Portal ↗</a>}
+          <Link href={`/apply?service=${encodeURIComponent(service)}`}>Apply Now →</Link>
         </article>)}</div>
       </div>)}
 
