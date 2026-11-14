@@ -44,7 +44,7 @@ function ApplyForm() {
     if (!window.Razorpay) return setError('Payment system is still loading. Please try again.');
     setPaying(true);
     try {
-      const orderResponse = await fetch('/api/payments/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: selected.fee * 100, receipt: result }) });
+      const orderResponse = await fetch('/api/payments/create-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ applicationId: result }) });
       const order = await orderResponse.json();
       if (!orderResponse.ok) throw new Error(order.error || 'Unable to start payment.');
       const razorpay = new window.Razorpay({
@@ -57,7 +57,16 @@ function ApplyForm() {
         prefill: { name, email, contact: mobile },
         notes: { application_id: result },
         theme: { color: '#0f766e' },
-        handler: () => setError('Payment received by Razorpay. Keep the payment confirmation for your records.'),
+        handler: async (payment: any) => {
+          try {
+            const verifyResponse = await fetch('/api/payments/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payment, applicationId: result }) });
+            const verified = await verifyResponse.json();
+            if (!verifyResponse.ok) throw new Error(verified.error || 'Payment verification failed.');
+            setError('Payment verified successfully. Your payment reference is ' + payment.razorpay_payment_id + '.');
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Payment verification failed. Contact the service centre with your Razorpay receipt.');
+          }
+        },
         modal: { ondismiss: () => setPaying(false) },
       });
       razorpay.open();
