@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const name = String(body.name || '').trim();
     const mobile = String(body.mobile || '').trim();
     const password = String(body.password || '');
-    if (name.length < 2 || name.length > 80 || !/^\\d{10}$/.test(mobile) || password.length < 8 || password.length > 128) {
+    if (name.length < 2 || name.length > 80 || !/^[0-9]{10}$/.test(mobile) || password.length < 8 || password.length > 128) {
       return Response.json({ error: 'Enter a name, valid 10-digit mobile number and password of at least 8 characters.' }, { status: 400 });
     }
     const user = await registerUser(name, mobile, password);
