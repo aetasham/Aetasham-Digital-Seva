@@ -36,6 +36,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Payment order does not match this application.' }, { status: 400 });
     }
 
+    const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+      headers: { Authorization: `Basic ${auth}` }, cache: 'no-store',
+    });
+    const payment = await paymentResponse.json();
+    if (!paymentResponse.ok || payment.order_id !== orderId || payment.amount !== 14900 || payment.currency !== 'INR' || payment.status !== 'captured') {
+      return NextResponse.json({ error: 'Payment is not yet captured. Please check your Razorpay receipt before retrying.' }, { status: 400 });
+    }
+
     const db = neon(databaseUrl);
     await db`CREATE TABLE IF NOT EXISTS application_payments (
       order_id VARCHAR(80) PRIMARY KEY,
