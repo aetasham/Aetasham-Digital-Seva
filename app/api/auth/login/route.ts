@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const mobile = String(body.mobile || '').trim();
     const password = String(body.password || '');
-    if (!/^\\d{10}$/.test(mobile) || !password || password.length > 128) return Response.json({ error: 'Enter your registered mobile number and password.' }, { status: 400 });
+    if (!/^[0-9]{10}$/.test(mobile) || !password || password.length > 128) return Response.json({ error: 'Enter your registered mobile number and password.' }, { status: 400 });
     const user = await verifyUser(mobile, password);
     if (!user) return Response.json({ error: 'Mobile number or password is incorrect.' }, { status: 401 });
     await setUserSession(user.id);
