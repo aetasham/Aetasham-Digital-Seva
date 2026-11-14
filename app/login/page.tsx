@@ -28,7 +28,7 @@ export default function LoginPage() {
     <header className="topbar"><Link href="/" className="brand"><div className="logo">A</div><div><b>Aetasham Digital Seva</b><small>Private Digital Service Centre</small></div></Link><nav><Link href="/">Home</Link><Link href="/services">Services</Link><Link href="/apply">Apply Online</Link><Link href="/status">Status</Link></nav></header>
     <section className="section"><div className="formbox" style={{maxWidth:480,margin:'25px auto'}}>
       <span className="eyebrow">CUSTOMER ACCOUNT</span><h2>{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
-      <p>Use your mobile number to manage your service requests.</p>
+      <p>Create an account or log in to use Aetasham Digital Seva.</p>
       <div style={{display:'flex',gap:8,margin:'20px 0'}}><button type="button" className={mode==='login'?'primary':'secondary'} onClick={()=>{setMode('login');setMessage('')}}>Login</button><button type="button" className={mode==='signup'?'primary':'secondary'} onClick={()=>{setMode('signup');setMessage('')}}>Sign up</button></div>
       <form onSubmit={submit}>
         {mode==='signup' && <label>Full name<input value={name} onChange={e=>setName(e.target.value)} required minLength={2} maxLength={80} autoComplete="name"/></label>}
